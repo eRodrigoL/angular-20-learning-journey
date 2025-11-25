@@ -400,3 +400,453 @@ Para mudar o seletor, gere com `--selector` **ou** edite o campo `selector` no d
 ---
 
 ---
+
+## 8. Ciclo de vida de componentes Angular
+
+O ciclo de vida de um componente Angular é o conjunto de fases pelas quais esse componente passa:
+**criação** → **projeção de conteúdo** → **renderização da view** → **atualizações** → **limpeza**.
+
+Cada uma dessas fases dispara métodos especiais do Angular chamados _lifecycle hooks_ (ou simplesmente **hooks**).
+Esses hooks são **pontos de extensão do framework** onde você encaixa código para reagir a momentos específicos do ciclo de vida.
+
+Usar o hook certo significa colocar cada ação exatamente na fase em que ela faz mais sentido.
+
+---
+
+### 8.1. Lifecycle Hooks por ordem de execução
+
+Ordem típica de execução em um componente:
+
+1. `constructor()`
+2. `ngOnChanges(changes)` _(quando houver `@Input()`; dispara antes do `ngOnInit` e na primeira atribuição)_
+3. `ngOnInit()`
+4. `ngDoCheck()` _(detecção customizada; roda com alta frequência, antes dos hooks de conteúdo/view)_
+5. **Content projection**
+   - `ngAfterContentInit()`
+   - `ngAfterContentChecked()` _(pode repetir a cada verificação)_
+6. **View**
+   - `ngAfterViewInit()`
+   - `ngAfterViewChecked()` _(pode repetir a cada verificação)_
+7. `ngOnDestroy()` _(onde limpar recursos)_
+
+> **Pense assim:** `OnInit` = início, `OnChanges` = reagir ao pai, `After*` = DOM pronto, `OnDestroy` = limpeza.
+> Obs: `ngOnChanges` dispara **antes** do `ngOnInit` e sempre que um `@Input()` mudar (incluindo a primeira vez).
+
+---
+
+### 8.2. Quando usar cada um
+
+- **`constructor()`**  
+  Chamado quando a classe é instanciada.  
+  **Use para**:
+
+  - injeção de dependências (services, tokens, etc.);
+  - inicializar **estado leve** (valores padrão, flags simples).  
+    **Não use para**:
+  - acessar o DOM;
+  - depender de `@Input()` (ainda não foram setados).
+
+- **`ngOnInit()`** (`implements OnInit`)  
+  Componente está pronto para iniciar sua lógica inicial.  
+  **Use para**:
+
+  - carregar dados iniciais (chamadas HTTP, por exemplo);
+  - configurar _subscriptions_ (com limpeza planejada);
+  - iniciar timers/efeitos (com limpeza posterior).
+
+- **`ngOnChanges(changes)`** (`implements OnChanges`)  
+  Reage a **mudanças de `@Input()`** — inclusive a primeira atribuição.  
+  **Use para**:
+
+  - recalcular algo em resposta a alterações vindas do componente pai;
+  - manter algum estado derivado de `@Input()`.
+
+- **`ngDoCheck()`** (`implements DoCheck`)  
+  Hook de **detecção customizada**, chamado antes dos hooks de conteúdo/view e com alta frequência.  
+  **Use raramente**:
+
+  - quando `OnChanges` não cobre o caso, por exemplo:
+    - comparar profundamente objetos mutáveis;
+    - observar mudanças que o Angular não detecta sozinho.  
+      **Cuidado**:
+  - código pesado aqui afeta muito a performance.
+
+- **`ngAfterContentInit()` / `ngAfterContentChecked()`**  
+  Relacionados à **projeção de conteúdo** (`<ng-content>`).  
+  **Use para**:
+
+  - interagir com conteúdo projetado via `@ContentChild/@ContentChildren`;
+  - configurar algo baseado no conteúdo recebido do pai.  
+    `ngAfterContentInit()` roda **uma vez**, após o conteúdo projetado ser inicializado.  
+    `ngAfterContentChecked()` roda **a cada ciclo de verificação** após o conteúdo ter sido verificado.
+
+- **`ngAfterViewInit()` / `ngAfterViewChecked()`**  
+  Relacionados à **view do próprio componente** (template + `@ViewChild/@ViewChildren`).  
+  **Use para**:
+
+  - acessar elementos do template via `@ViewChild/@ViewChildren`;
+  - inicializar bibliotecas de UI que dependem do DOM já renderizado.  
+    `ngAfterViewInit()` roda **uma vez**, após a view ser inicializada.  
+    `ngAfterViewChecked()` roda **a cada ciclo de verificação** após a view ter sido checada.  
+    **Cuidado**: evite lógica pesada em `AfterViewChecked` / `AfterContentChecked`.
+
+- **`ngOnDestroy()`** (`implements OnDestroy`)  
+  Último hook do ciclo de vida, chamado **antes de o componente ser destruído**.  
+  **Use para**:
+  - cancelar _subscriptions_;
+  - limpar _timeouts_ e _intervals_;
+  - remover _observers_ do DOM, _event listeners_ e recursos nativos em geral (ex.: `IntersectionObserver`);
+  - liberar qualquer recurso que você tenha “aberto” durante a vida do componente.
+
+> Regra geral: **tudo que você abre (conexões, timers, listeners), você precisa fechar em `ngOnDestroy()` ou usando utilitários que limitem o lifetime automaticamente.**
+
+---
+
+### 8.3. Exemplos de uso por hook
+
+#### 8.3.1. Exemplo simples: `constructor()` + Dependency Injection
+
+Dependency Injection (DI) = Injeção de Dependências
+
+```ts
+import { Component } from "@angular/core";
+import { LoggerService } from "../logger.service";
+
+@Component({
+  selector: "app-logger-demo",
+  template: `<p>Veja o console para acompanhar os logs do ciclo de vida.</p>`,
+})
+export class LoggerDemoComponent {
+  constructor(private logger: LoggerService) {
+    // DI e setup leve
+    this.logger.info("[constructor] Componente instanciado");
+  }
+}
+```
+
+#### 8.3.2. `OnInit` + `OnChanges` com `@Input()`
+
+```ts
+import {
+  Component,
+  Input,
+  OnInit,
+  OnChanges,
+  SimpleChanges,
+} from "@angular/core";
+
+@Component({
+  selector: "app-user-card",
+  template: `<h3>{{ user?.name }}</h3>`,
+})
+export class UserCardComponent implements OnInit, OnChanges {
+  @Input() userId!: string;
+  user: { id: string; name: string } | null = null;
+
+  ngOnInit() {
+    // Carregue dependências que não dependem de @Input()
+    // Ex.: inicializar serviços, telemetry etc.
+    console.log("[OnInit] Componente pronto para iniciar lógica inicial");
+  }
+
+  ngOnChanges(changes: SimpleChanges) {
+    if (changes["userId"] && this.userId) {
+      console.log("[OnChanges] userId mudou para:", this.userId);
+      // Reaja imediatamente a mudanças do pai
+      // this.user = ...
+    }
+  }
+}
+```
+
+#### 8.3.3. Content vs View (`AfterContent*` e `AfterView*`)
+
+```ts
+import {
+  Component,
+  ContentChild,
+  AfterContentInit,
+  AfterContentChecked,
+  ViewChild,
+  AfterViewInit,
+  AfterViewChecked,
+  ElementRef,
+} from "@angular/core";
+
+@Component({
+  selector: "app-panel",
+  template: ` <section>
+    <header><ng-content select="[panel-title]"></ng-content></header>
+    <div #contentArea><ng-content></ng-content></div>
+  </section>`,
+})
+export class PanelComponent
+  implements
+    AfterContentInit,
+    AfterContentChecked,
+    AfterViewInit,
+    AfterViewChecked
+{
+  @ContentChild("titleTpl") titleTpl!: any; // vindo de fora via <ng-content>
+  @ViewChild("contentArea") contentArea!: ElementRef; // elemento do próprio template
+
+  ngAfterContentInit() {
+    console.log("[AfterContentInit] Conteúdo projetado disponível");
+    // Conteúdo projetado disponível (ng-content)
+  }
+
+  ngAfterContentChecked() {
+    console.log("[AfterContentChecked] Conteúdo projetado checado");
+    // Evite lógica pesada aqui
+  }
+
+  ngAfterViewInit() {
+    console.log("[AfterViewInit] View inicializada");
+    // Elementos do template estão no DOM
+    // this.contentArea.nativeElement.focus();
+  }
+
+  ngAfterViewChecked() {
+    console.log("[AfterViewChecked] View checada");
+    // Evite lógica pesada aqui
+  }
+}
+```
+
+#### 8.3.4. `DoCheck` (detecção customizada)
+
+```ts
+import { DoCheck, Input, Component } from "@angular/core";
+
+@Component({
+  selector: "app-heavy-list",
+  template: `<ul>
+    <li *ngFor="let item of items">{{ item }}</li>
+  </ul>`,
+})
+export class HeavyListComponent implements DoCheck {
+  @Input() items: string[] = [];
+  private prevSnapshot = "";
+
+  ngDoCheck() {
+    const snapshot = JSON.stringify(this.items);
+
+    if (snapshot !== this.prevSnapshot) {
+      console.log("[DoCheck] Lista mudou:", this.items);
+      this.prevSnapshot = snapshot;
+      // Recalcule algo caro apenas quando realmente mudar
+    }
+  }
+}
+```
+
+#### 8.3.5. `OnDestroy` (limpeza de recursos)
+
+```ts
+import { Component, OnInit, OnDestroy } from "@angular/core";
+
+@Component({
+  selector: "app-timer-demo",
+  template: `<p>Contador: {{ counter }}</p>`,
+})
+export class TimerDemoComponent implements OnInit, OnDestroy {
+  counter = 0;
+  private intervalId?: number;
+
+  ngOnInit() {
+    this.intervalId = window.setInterval(() => {
+      this.counter++;
+      console.log("[TimerDemo] counter =", this.counter);
+    }, 1000);
+  }
+
+  ngOnDestroy() {
+    if (this.intervalId != null) {
+      window.clearInterval(this.intervalId);
+      console.log("[OnDestroy] Timer limpo");
+    }
+  }
+}
+```
+
+---
+
+### 8.4. Recursos extras relacionados ao ciclo de vida
+
+Além dos hooks clássicos, o Angular moderno oferece utilitários que também se conectam à ideia de “quando algo roda” no ciclo:
+
+- **`afterNextRender()` e `afterEveryRender()`**  
+  Funções que você chama (em um contexto de injeção, geralmente no `constructor`) para rodar código **após a renderização da árvore de componentes**.  
+  Úteis quando você quer garantir que “tudo já foi renderizado” antes de executar alguma lógica (ex.: integração com libs externas).
+
+- **Signals e `input()` + `effect()`**  
+  Em código novo, é comum usar:
+  - `input()` (API de signals) no lugar de `@Input()` clássico;
+  - `effect()` para reagir a mudanças.  
+    Nessas situações, algumas coisas que antes iriam para `ngOnChanges` podem ser expressas com um `effect()` reagindo ao signal, deixando o fluxo mais declarativo.
+
+> Importante: isso **não aposenta** `ngOnChanges`, só oferece mais opções em projetos novos.
+
+---
+
+### 8.5. VAZAMENTO DE MEMÓRIA (Memory Leak)
+
+O vazamento de memória vai na contramão da **performance** e da **leveza** da aplicação.
+Em Angular, ele acontece quando um componente é criado e usado na tela, mas, mesmo depois de sair de cena (ser destruído), alguma parte da sua lógica — como _subscriptions_, timers, listeners ou observers — continua ativa **sem necessidade**, mantendo o componente ou seus dados vivos na memória.
+
+Evitar vazamento de memória significa prestar atenção ao tempo de vida (_lifetime_) dos componentes e se preocupar em **ligar cada recurso ao ciclo de vida do componente**, para que tudo seja limpo automaticamente quando ele for destruído.
+
+Ou seja:
+
+- sempre que for **aberto algo que fica vivo no tempo** em qualquer fase do ciclo de vida do componente;
+- é preciso garantir que isso **morra junto com o componente**.
+
+Exemplos do que “fica vivo”:
+
+- _subscriptions_ RxJS criadas no código (`.subscribe(...)`);
+- `setInterval` / `setTimeout`;
+- _event listeners_ manuais (`addEventListener`);
+- _observers_ de DOM (`IntersectionObserver`, `MutationObserver`);
+- integrações com bibliotecas externas que ficam escutando/observando algo.
+
+### 8.6. Técnicas práticas para evitar o vazamento de memória
+
+Resumindo:
+
+> **“Abri? Tenho que fechar.”**  
+> Mas, sempre que possível, deixe o **próprio Angular** fechar usando:
+>
+> - `| async` no template;
+> - `takeUntilDestroyed()` nas _subscriptions_ de código;
+> - `DestroyRef` + `onDestroy` / `onCleanup()` para efeitos, listeners e observers.
+
+Seguindo o padrão abaixo (sem `subscribe` “solto” nem `setInterval` sem limpeza), as chances de vazamento de memória são reduzidas drasticamente.
+
+#### 8.6.1. `async` pipe e `takeUntilDestroyed()`
+
+Use `async` pipe e `takeUntilDestroyed()` para tratar _observables_ sem deixar subscriptions penduradas.
+
+- No **template**, prefira o `async` pipe:
+
+  ```html
+  <ul *ngIf="users$ | async as users">
+    <li *ngFor="let user of users">{{ user.name }}</li>
+  </ul>
+  ```
+
+  > Com isso, o Angular faz:
+  >
+  > - a **subscription** quando o componente nasce;
+  > - o **unsubscribe** automaticamente quando ele é destruído.
+
+- No **código TypeScript**, ao lidar com _observables_, use `takeUntilDestroyed()`:
+
+  ```ts
+  import { Component, OnInit, inject } from "@angular/core";
+  import { takeUntilDestroyed } from "@angular/core/rxjs-interop";
+  import { UsersService } from "./users.service";
+
+  @Component({
+    selector: "app-users",
+    template: `<!-- lista -->`,
+  })
+  export class UsersComponent implements OnInit {
+    private users = inject(UsersService);
+
+    ngOnInit() {
+      this.users.stream$.pipe(takeUntilDestroyed()).subscribe((users) => {
+        console.log("[UsersComponent] recebidos", users);
+      });
+    }
+  }
+  ```
+
+  > Aqui, `takeUntilDestroyed()` está ligado ao **lifetime do componente**: quando ele é destruído, a _subscription_ é finalizada automaticamente.
+
+#### 8.6.2. Signals, `DestroyRef` e `onCleanup()`
+
+Quando usar `effect()`, atrele sua lógica ao ciclo de vida registrando a limpeza com `onCleanup()` e, se necessário, usando `DestroyRef` para amarrar o efeito ao contexto do componente.
+
+```ts
+import { Component, effect, inject } from "@angular/core";
+import { DestroyRef } from "@angular/core";
+import { timer } from "rxjs";
+
+@Component({
+  selector: "app-signal-demo",
+  template: `<p>Veja o console para acompanhar o efeito.</p>`,
+})
+export class SignalDemoComponent {
+  private destroyRef = inject(DestroyRef);
+
+  constructor() {
+    const subEffect = effect((onCleanup) => {
+      const sub = timer(0, 1000).subscribe(() => {
+        console.log("[effect] tick");
+      });
+
+      onCleanup(() => {
+        sub.unsubscribe();
+        console.log("[effect] limpo no destroy");
+      });
+    });
+
+    this.destroyRef.onDestroy(() => {
+      // Ao destruir o contexto, o effect também é limpo
+      subEffect.destroy();
+    });
+  }
+}
+```
+
+> Qualquer recurso aberto dentro do `effect` é registrado no `onCleanup`, que roda quando o efeito deixa de existir (por exemplo, quando o componente é destruído).
+
+#### 8.6.3. Timers, listeners e observers
+
+Em casos fora do RxJS — Timers (`setInterval`), listeners (`addEventListener`) e observers (`IntersectionObserver`) — use `ngOnDestroy()` ou `onDestroy` (via `DestroyRef`) para limpar:
+
+```ts
+import { Component, OnInit, OnDestroy, inject } from "@angular/core";
+import { DestroyRef } from "@angular/core";
+
+@Component({
+  selector: "app-resize-demo",
+  template: `<p>Redimensione a janela e veja o console.</p>`,
+})
+export class ResizeDemoComponent implements OnInit, OnDestroy {
+  private destroyRef = inject(DestroyRef);
+  private onResize = () => console.log("resize");
+
+  ngOnInit() {
+    window.addEventListener("resize", this.onResize);
+
+    this.destroyRef.onDestroy(() => {
+      window.removeEventListener("resize", this.onResize);
+    });
+  }
+
+  ngOnDestroy() {
+    // Se preferir o hook clássico, garante a limpeza aqui também
+    window.removeEventListener("resize", this.onResize);
+  }
+}
+```
+
+### 8.7. Erros comuns (e como evitar)
+
+- **Ler `@Input()` no `constructor`**  
+  `@Input()` ainda não está definido. Use `ngOnInit`/`ngOnChanges`.
+
+- **Lógica pesada em `AfterViewChecked/AfterContentChecked`**  
+  Esses hooks rodam muitas vezes; mova o que for possível para `OnInit/AfterViewInit` ou para um `effect()`/`afterNextRender()`.
+
+- **Esquecer de desinscrever**  
+  Prefira `async` pipe, `takeUntilDestroyed` ou limpeza em `ngOnDestroy`.
+
+- **Usar `DoCheck` sem necessidade**  
+  Prefira `OnChanges` ou signals (`input()` + `effect()`).  
+  Se `DoCheck` for realmente necessário, minimize o trabalho feito dentro dele.
+
+---
+
+---
