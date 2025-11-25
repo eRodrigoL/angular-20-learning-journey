@@ -238,3 +238,165 @@ npm -v
 ---
 
 ---
+
+## 7. O que são COMPONENTES no Angular
+
+**_COMPONENTE_** é a **unidade básica de UI** no Angular.
+com TS (classe e metadados) + HTML (template) + SCSS (estilo) e, opcionalmente, SPEC.TS (testes).
+
+Junta **lógica** (classe TypeScript), **template** (HTML), **estilos** (CSS/SCSS) e **metadados** (decorator @Component).
+Componentes são **standalone por padrão** e se conectam via **Inputs/Outputs**, **rotas** e **serviços**.
+
+---
+
+### 7.1. Como gerar um componente?
+
+O **Angular CLI** gera os artefatos para o projeto através do comando `ng generate`.
+
+Para gerar um artefato "componente" o comando é:
+
+```bash
+ng generate component <nome>
+```
+
+Comando reduzido:
+
+```bash
+ng g c <nome>
+```
+
+> **Importante**: `<nome>` na verdade representa um **caminho**, onde barras "`/`" separam pasta e subpastas. O **último segmento** define **(a)** a **pasta final** criada, **(b)** o **seletor** (prefixado, ex.: `app-`), e **(c)** o **nome da classe** em **PascalCase**.  
+> Ex.: `components/nome-do-componente` → classe `NomeDoComponente`, seletor `app-nome-do-componente`.
+
+### 7.2. O que é gerado
+
+Para o comando de exemplo
+
+```bash
+ng g c components/nome-desejado
+```
+
+Estrutura criada (padrão Angular 20) é:
+
+```txt
+src/
+└─ app/
+   └─ components/
+      └─ nome-desejado/
+         ├─ nome-desejado.html       ⭠ template do componente (markup)
+         ├─ nome-desejado.scss       ⭠ estilos do componente (pode ser .css/.scss/ .sass)
+         ├─ nome-desejado.spec.ts    ⭠ testes unitários do componente
+         └─ nome-desejado.ts         ⭠ classe + metadados (@Component) do componente
+```
+
+**Arquivo principal: classe + metadados (@Component) do componente:**
+
+```ts
+// src/app/components/nome-desejado/nome-desejado.ts
+import { Component } from "@angular/core";
+
+@Component({
+  //     seletor 👇🏻 = prefixo (p.ex. "app-") + último segmento do caminho
+  selector: "app-nome-desejado",
+  imports: [], // dependências que o template usa (diretivas, pipes, outros componentes)
+  templateUrl: "./nome-desejado.html",
+  styleUrl: "./nome-desejado.scss", // v20 costuma gerar "styleUrl" (singular)
+})
+export class NomeDesejado {}
+// nome da classe 👆🏻 = último segmento em PascalCase, sem hífens
+```
+
+### 7.3. Opções úteis
+
+O comando `ng g c <nome>` pode receber as seguintes opções:
+
+- `--style=scss` → cria arquivo de estilo em SCSS
+- `--skip-tests` → não cria o arquivo de testes `.spec.ts`
+- `--selector=app-meu-card` → define um seletor específico
+- `--inline-template` / `--inline-style` → usa `template`/`styles` em linha
+- `--flat` → coloca os arquivos no diretório alvo **sem** criar uma pasta própria
+- `--prefix=app` → altera o prefixo do seletor para este componente
+
+> **Dica**: em apps standalone, tudo que o template usa deve aparecer em `imports` (ex.: `RouterOutlet`, componentes filhos, diretivas/pipes).
+
+---
+
+### 7.4. Como usar o componente
+
+Para usar o componente do exemplo abaixo
+
+```ts
+// src/app/components/componente-desejado/componente-desejado.ts
+import { Component } from "@angular/core";
+import { RouterLink, RouterLinkActive } from "@angular/router";
+
+@Component({
+  selector: "app-omponente-desejado",
+  imports: [RouterLink, RouterLinkActive],
+  templateUrl: "./omponente-desejado.html",
+  styleUrl: "./omponente-desejado.scss",
+})
+export class ComponenteDesejado {}
+```
+
+Primeiro importe-o na classe do componente pai (ex: `app.ts`):
+
+```ts
+// src/app/app.ts
+import { Component, signal } from "@angular/core";
+import { RouterOutlet } from "@angular/router";
+import { ComponenteDesejado } from "./components/componente-desejado/componente-desejado"; // importação do componente
+
+@Component({
+  selector: "app-root",
+  imports: [RouterOutlet, ComponenteDesejado], // disponibiliza o <app-componente-desejado> neste template
+  templateUrl: "./app.html",
+  styleUrl: "./app.css",
+})
+export class App {
+  protected readonly title = signal("navegacao");
+}
+```
+
+> **Componente pai ➝** contém o filho no template (`<app-componente-desejado />`), importa-o em imports e passa dados para o filho.
+> **Componente filho ➝** é usado dentro do pai. Recebe dados via `@Input()` e emite eventos de volta ao pai via `@Output()`/`EventEmitter`.
+
+Depois, use o seletor no template do componente pai (ex.: `app.html`):
+
+```html
+<componente-desejado />
+<!-- 👆🏻 nome = valor do selector -->
+```
+
+Para mudar o seletor, gere com `--selector` **ou** edite o campo `selector` no decorator @Component.
+
+---
+
+### 7.5. Boas práticas rápidas
+
+- **Kebab-case consistente**: mantenha o mesmo nome base entre `.ts`/`.html`/`.scss`/`.spec.ts`.
+- **Uma responsabilidade por componente**: UI e lógica de apresentação; mova regra de negócio para **services**.
+- **Imports explícitos**: adicione em `imports` tudo que o template requer.
+- **Padrões modernos**: use o **control flow** novo (`@if`, `@for`, `@switch`) e **Signals** quando precisar de estado local reativo e previsível.
+
+---
+
+> **AVISO IMPORTANTE!!!**
+>
+> No Angular 20, o CLI simplificou a convenção de nomes de arquivos, passando a gerar **nomes curtos**, sem os sufixos no meio.
+>
+> Ex.: `home.ts`, `home.html`, `home.scss` (em vez de `home.component.ts/html/scss`).
+>
+> Os nomes curtos valem para os componentes (`.components`), serviço (`.serviço`) e diretiva (`.iretiva`).
+>
+> Porém os geradores de outros artefatos mantêm o sufixo tipo no nome do arquivo, só que com **hífen** (não mais com ponto):
+>
+> - Guards → `auth-guard.ts`
+> - Interceptors → `logging-interceptor.ts`
+> - Resolvers → `user-resolver.ts`
+> - Modules → `shared-module.ts`
+> - Pipes → `currency-pipe.ts`
+
+---
+
+---
