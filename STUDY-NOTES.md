@@ -195,3 +195,46 @@ Instale e configure as extensões abaixo para acelerar o fluxo:
 ---
 
 ---
+
+## 6. Comandos rápidos (cola de bolso)
+
+```bash
+# criar projeto
+ng new <nome-do-app> --routing --style=scss
+```
+
+```bash
+# rodar local
+ng serve -o
+```
+
+```bash
+# gerar artefatos
+ng g application admin               # application
+ng g component shared/header         # component
+ng g class models/user               # class
+ng g directive shared/auto-focus     # directive
+ng g enum models/user-role           # enum
+ng g guard auth/auth                 # guard
+ng g interceptor core/http/auth      # interceptor
+ng g interface models/user           # interface
+ng g library ui-kit                  # library
+ng g module shared/shared            # module (ainda útil p/ libs e agrupamentos, mesmo com standalone)
+ng g pipe shared/currency-br         # pipe
+ng g resolver users/user             # resolver
+ng g service core/http/api           # service
+
+# O caminho define pastas.
+# O último segmento vira o nome base dos arquivos
+```
+
+```bash
+# checar versões
+ng version
+node -v
+npm -v
+```
+
+---
+
+---
