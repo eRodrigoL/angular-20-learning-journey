@@ -34,3 +34,89 @@
 ---
 
 ---
+
+## 3. Setup de um projeto
+
+### 3.1. Pré-requisitos
+
+- Node.js instalado [link para download](https://nodejs.org/en/download).
+
+  Verifique Node.js (LTS recomendado) e npm:
+
+  ```bash
+  node -v
+  npm -v
+  ```
+
+- Opcionalmente, pode ser instalado o NVM (Node Version Manager) que permite instalar e alternar entre várias versões do Node.js na mesma máquina. [link para download](https://www.nvmnode.com/pt/guide/download.html)
+
+### 3.2. Instalar Angular CLI
+
+Versão mais recente:
+
+```bash
+npm i -g @angular/cli
+ng version
+```
+
+Versão específica (ex: v20.3.6):
+
+```bash
+npm i -g @angular/cli@20.3.6
+ng version
+```
+
+### 3.3. Criar projeto
+
+Rode `ng new <nome-do-app>` trocando `<nome-do-app>` pelo nome que o projeto terá.
+
+Nome de exemplo: **_meu-primeiro-app-angular_**
+
+```bash
+ng new <meu-primeiro-app-angular>
+# stylesheet format: SCSS
+# Server-Side Rendering (SSR): N
+# zoneless: N
+# AI tools: None
+```
+
+**Stylesheet Format: Sass (SCSS)**:
+
+- O que é: pré-processador de CSS com variáveis, mixins, aninhamento etc.
+- Por que escolher: estilos mais organizados e reutilizáveis.
+- Alternativas: CSS, Sass (indented), Less (dependendo do preset).
+- Impacto: o projeto nasce com arquivos `.scss` e build já configurado.
+
+**SSR/SSG: No**:
+
+- O que é: SSR renderiza HTML no servidor (melhora SEO/TTFB); SSG gera HTML estático no build.
+- Por que “No”: simplifica o começo (menos camadas/deploys).
+- Quando “Yes”: apps públicas com SEO/preview/primeiro carregamento crítico.
+- Como ligar depois: `ng add @angular/ssr` (cria setup para SSR/Prerender).
+
+**Zoneless (sem zone.js): No**:
+
+- O que é: remove zone.js e usa detecção de mudanças orientada por **Signals**.
+- Por que “No”: caminho tradicional; muitos exemplos/libs assumem zone.js.
+- Quando “Yes”: foco em performance/controle fino de change detection.
+- Observação: zoneless exige padrões mais explícitos para atualizar a UI.
+
+**AI Tools: None**:
+
+- O que é: a CLI pode pré-configurar integrações (prompts, regras, snippets).
+- Por que “None”: evita ruído no começo; pode adicionar depois.
+- Se escolher outra: a CLI cria arquivos/configs de boas práticas da ferramenta.
+
+### 3.4. Rodar projeto
+
+A opção **`-o`** (`--open`) abre o navegador automaticamente em `http://localhost:4200` ao terminar a compilação.
+Sem **`-o`**, abra manualmente: `http://localhost:4200`.
+
+```bash
+cd <nome-do-app>
+ng serve -o
+```
+
+---
+
+---
