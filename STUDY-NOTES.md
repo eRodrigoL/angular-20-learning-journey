@@ -165,7 +165,7 @@ nome-do-projeto
 └─ tsconfig.spec.json          # tsconfig dos testes
 ```
 
-### 4.3. Conceitos-chave (que impactam a anatomia)
+### 4.3. Conceitos chave (que impactam a anatomia)
 
 - **Control Flow moderno**: preferir a nova sintaxe `@if`, `@for`, `@switch`. As diretivas antigas `*ngIf`, `*ngFor`, `*ngSwitch` estão **deprecadas**.
 - **Signals estáveis**: APIs como `signal`, `computed`, `effect` e utilitários (`toSignal` etc.).
@@ -180,6 +180,17 @@ nome-do-projeto
 - **Providers centralizados** em `app.config.ts`: `provideRouter`, `provideHttpClient`, `provideAnimations` etc.
 - **Migrar templates** para o **control flow novo** (`@if/@for/@switch`) conforme o projeto evoluir.
 - **Padrão de nomes** consistente (`feature-name.component.ts`, `feature-name.routes.ts` etc.) e adoção de `core/`, `shared/`, `features/`.
+
+---
+
+---
+
+## 5. Extensões VS Code úteis
+
+Instale e configure as extensões abaixo para acelerar o fluxo:
+
+- [Angular Language Service](https://marketplace.visualstudio.com/items?itemName=Angular.ng-template) — _Autocomplete_ e diagnósticos para templates.
+- [Auto Rename Tag](https://marketplace.visualstudio.com/items?itemName=formulahendry.auto-rename-tag) — renomeia automaticamente tags HTML pareadas.
 
 ---
 
