@@ -10,7 +10,7 @@
   box-shadow: 0 8px 16px #ccc;
   padding: 20px 30px;
   text-align: center;
-  width: 90%;
+  width: 100%;
   max-width: 600px;
 }
 
@@ -41,11 +41,22 @@ input:focus {
   border-color: #0056b3;
 }
 
-button {
+button[type='submit'] {
   padding: 10px 20px;
   border: none;
   border-radius: 6px;
   background: #007bff;
+  color: #fff;
+  font-size: 16px;
+  cursor: pointer;
+  transition: backgroud 0.3s;
+}
+
+button[type='button'] {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 6px;
+  background: #d51f1f;
   color: #fff;
   font-size: 16px;
   cursor: pointer;
@@ -87,4 +98,8 @@ tr:nth-child(even) {
 input[type='checkbox'] {
   transform: scale(1.2);
   cursor: pointer;
+}
+
+.item-riscado {
+  text-decoration: line-through;
 }
